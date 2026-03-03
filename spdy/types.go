@@ -278,6 +278,16 @@ type Framer struct {
 // from/to the Reader and Writer, so the caller should pass in an appropriately
 // buffered implementation to optimize performance.
 func NewFramer(w io.Writer, r io.Reader) (*Framer, error) {
+	return newFramer(w, r)
+}
+
+// NewFramerWithOptions allocates a new Framer for a given SPDY connection and
+// applies frame parsing limits via options.
+func NewFramerWithOptions(w io.Writer, r io.Reader, opts ...FramerOption) (*Framer, error) {
+	return newFramer(w, r, opts...)
+}
+
+func newFramer(w io.Writer, r io.Reader, opts ...FramerOption) (*Framer, error) {
 	compressBuf := new(bytes.Buffer)
 	compressor, err := zlib.NewWriterLevelDict(compressBuf, zlib.BestCompression, []byte(headerDictionary))
 	if err != nil {
@@ -288,6 +298,11 @@ func NewFramer(w io.Writer, r io.Reader) (*Framer, error) {
 		headerBuf:        compressBuf,
 		headerCompressor: compressor,
 		r:                r,
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(framer)
+		}
 	}
 	return framer, nil
 }

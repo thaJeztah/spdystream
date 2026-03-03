@@ -174,6 +174,25 @@ func TestSpdyStreams(t *testing.T) {
 	wg.Wait()
 }
 
+func TestNewConnectionWithOptions(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer func() {
+		_ = clientConn.Close()
+		_ = serverConn.Close()
+	}()
+
+	_, err := NewConnectionWithOptions(
+		clientConn,
+		false,
+		spdy.WithMaxControlFramePayloadSize(1024),
+		spdy.WithMaxHeaderFieldSize(128),
+		spdy.WithMaxHeaderCount(16),
+	)
+	if err != nil {
+		t.Fatalf("Error creating spdy connection with options: %s", err)
+	}
+}
+
 func TestPing(t *testing.T) {
 	var wg sync.WaitGroup
 	server, listen, serverErr := runServer(&wg)
