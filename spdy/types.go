@@ -51,6 +51,11 @@ const (
 // MaxDataLength is the maximum number of bytes that can be stored in one frame.
 const MaxDataLength = 1<<24 - 1
 
+const (
+	defaultMaxHeaderFieldSize uint32 = 1 << 20
+	defaultMaxHeaderCount     uint32 = 1000
+)
+
 // headerValueSepator separates multiple header values.
 const headerValueSeparator = "\x00"
 
@@ -256,7 +261,9 @@ type Framer struct {
 	headerReader              io.LimitedReader
 	headerDecompressor        io.ReadCloser
 
-	maxFrameLength uint32 // overrides the default frame payload length limit.
+	maxFrameLength       uint32 // overrides the default frame payload length limit.
+	maxHeaderFieldSize   uint32 // overrides the default per-header name/value length limit.
+	maxHeaderCount       uint32 // overrides the default header count limit.
 }
 
 // NewFramer allocates a new Framer for a given SPDY connection, represented by

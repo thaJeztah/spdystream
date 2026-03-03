@@ -269,6 +269,42 @@ func TestReadFrameRejectsSettingsLengthMismatch(t *testing.T) {
 	}
 }
 
+func TestParseHeaderValueBlockRejectsHeaderCountOverLimit(t *testing.T) {
+	buffer := bytes.NewBuffer([]byte{
+		0x00, 0x00, 0x00, 0x02, // numHeaders = 2
+	})
+
+	f := &Framer{maxHeaderCount: 1}
+	_, err := f.parseHeaderValueBlock(buffer, 1)
+	if err == nil {
+		t.Fatal("expected error for excessive header count")
+	}
+	spdyErr, ok := err.(*Error)
+	if !ok || spdyErr.Err != InvalidControlFrame {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseHeaderValueBlockRejectsHeaderFieldSizeOverLimit(t *testing.T) {
+	buffer := bytes.NewBuffer([]byte{
+		0x00, 0x00, 0x00, 0x01, // numHeaders = 1
+		0x00, 0x00, 0x00, 0x02, // name length = 2
+		0x61, 0x62, // name = "ab"
+		0x00, 0x00, 0x00, 0x01, // value length = 1
+		0x63, // value = "c"
+	})
+
+	f := &Framer{maxHeaderFieldSize: 1}
+	_, err := f.parseHeaderValueBlock(buffer, 1)
+	if err == nil {
+		t.Fatal("expected error for excessive header field size")
+	}
+	spdyErr, ok := err.(*Error)
+	if !ok || spdyErr.Err != InvalidControlFrame {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestCreateParsePing(t *testing.T) {
 	buffer := new(bytes.Buffer)
 	framer, err := NewFramer(buffer, buffer)

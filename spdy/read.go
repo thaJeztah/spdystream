@@ -195,12 +195,26 @@ func (f *Framer) parseHeaderValueBlock(r io.Reader, streamId StreamId) (http.Hea
 	if err := binary.Read(r, binary.BigEndian, &numHeaders); err != nil {
 		return nil, err
 	}
+	maxHeaders := defaultMaxHeaderCount
+	if f.maxHeaderCount > 0 {
+		maxHeaders = f.maxHeaderCount
+	}
+	if numHeaders > maxHeaders {
+		return nil, &Error{InvalidControlFrame, streamId}
+	}
+	maxFieldSize := defaultMaxHeaderFieldSize
+	if f.maxHeaderFieldSize > 0 {
+		maxFieldSize = f.maxHeaderFieldSize
+	}
 	var e error
 	h := make(http.Header, int(numHeaders))
 	for i := 0; i < int(numHeaders); i++ {
 		var length uint32
 		if err := binary.Read(r, binary.BigEndian, &length); err != nil {
 			return nil, err
+		}
+		if length > maxFieldSize {
+			return nil, &Error{InvalidControlFrame, streamId}
 		}
 		nameBytes := make([]byte, length)
 		if _, err := io.ReadFull(r, nameBytes); err != nil {
@@ -216,6 +230,9 @@ func (f *Framer) parseHeaderValueBlock(r io.Reader, streamId StreamId) (http.Hea
 		}
 		if err := binary.Read(r, binary.BigEndian, &length); err != nil {
 			return nil, err
+		}
+		if length > maxFieldSize {
+			return nil, &Error{InvalidControlFrame, streamId}
 		}
 		value := make([]byte, length)
 		if _, err := io.ReadFull(r, value); err != nil {
