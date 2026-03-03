@@ -350,6 +350,9 @@ Loop:
 			} else {
 				debugMessage("(%p) EOF received", s)
 			}
+			if spdyErr, ok := err.(*spdy.Error); ok && spdyErr.Err == spdy.InvalidControlFrame {
+				_ = s.conn.Close()
+			}
 			break
 		}
 		var priority uint8

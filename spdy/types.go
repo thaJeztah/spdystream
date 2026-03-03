@@ -255,6 +255,8 @@ type Framer struct {
 	r                         io.Reader
 	headerReader              io.LimitedReader
 	headerDecompressor        io.ReadCloser
+
+	maxFrameLength uint32 // overrides the default frame payload length limit.
 }
 
 // NewFramer allocates a new Framer for a given SPDY connection, represented by

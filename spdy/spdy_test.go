@@ -27,7 +27,8 @@ func TestHeaderParsing(t *testing.T) {
 	var headerValueBlockBuf bytes.Buffer
 	writeHeaderValueBlock(&headerValueBlockBuf, HeadersFixture)
 	const bogusStreamId = 1
-	newHeaders, err := parseHeaderValueBlock(&headerValueBlockBuf, bogusStreamId)
+	f := &Framer{}
+	newHeaders, err := f.parseHeaderValueBlock(&headerValueBlockBuf, bogusStreamId)
 	if err != nil {
 		t.Fatal("parseHeaderValueBlock:", err)
 	}
@@ -220,6 +221,51 @@ func TestCreateParseSettings(t *testing.T) {
 	}
 	if !reflect.DeepEqual(settingsFrame, *parsedSettingsFrame) {
 		t.Fatal("got: ", *parsedSettingsFrame, "\nwant: ", settingsFrame)
+	}
+}
+
+func TestReadFrameRejectsOversizedControlFrame(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	framer, err := NewFramer(buffer, buffer)
+	if err != nil {
+		t.Fatal("Failed to create new framer:", err)
+	}
+	framer.maxFrameLength = 1
+
+	// Control frame header (version 3, SETTINGS, length = 2)
+	_, _ = buffer.Write([]byte{
+		0x80, 0x03, // control frame + version
+		0x00, 0x04, // SETTINGS
+		0x00,             // flags
+		0x00, 0x00, 0x02, // length = 2
+		0x00, 0x01, // payload (2 bytes)
+	})
+
+	_, err = framer.ReadFrame()
+	if err == nil {
+		t.Fatal("expected error for oversized control frame")
+	}
+}
+
+func TestReadFrameRejectsSettingsLengthMismatch(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	framer, err := NewFramer(buffer, buffer)
+	if err != nil {
+		t.Fatal("Failed to create new framer:", err)
+	}
+
+	// SETTINGS frame with declared payload length 0, but includes numSettings.
+	_, _ = buffer.Write([]byte{
+		0x80, 0x03, // control frame + version
+		0x00, 0x04, // SETTINGS
+		0x00,             // flags
+		0x00, 0x00, 0x00, // length = 0
+		0x00, 0x00, 0x00, 0x01, // numSettings = 1
+	})
+
+	_, err = framer.ReadFrame()
+	if err == nil {
+		t.Fatal("expected error for SETTINGS length mismatch")
 	}
 }
 
