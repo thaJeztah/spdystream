@@ -7,6 +7,7 @@ package spdy
 import (
 	"encoding/binary"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 )
@@ -47,13 +48,21 @@ func (frame *RstStreamFrame) write(f *Framer) (err error) {
 func (frame *SettingsFrame) write(f *Framer) (err error) {
 	frame.CFHeader.version = Version
 	frame.CFHeader.frameType = TypeSettings
-	frame.CFHeader.length = uint32(len(frame.FlagIdValues)*8 + 4)
+	payloadLen := len(frame.FlagIdValues)*8 + 4
+	if payloadLen > MaxDataLength {
+		return &Error{InvalidControlFrame, 0}
+	}
+	frame.CFHeader.length = uint32(payloadLen)
 
 	// Serialize frame to Writer.
 	if err = writeControlFrameHeader(f.w, frame.CFHeader); err != nil {
 		return
 	}
-	if err = binary.Write(f.w, binary.BigEndian, uint32(len(frame.FlagIdValues))); err != nil {
+	n := len(frame.FlagIdValues)
+	if uint64(n) > math.MaxUint32 {
+		return &Error{InvalidControlFrame, 0}
+	}
+	if err = binary.Write(f.w, binary.BigEndian, uint32(n)); err != nil {
 		return
 	}
 	for _, flagIdValue := range frame.FlagIdValues {
@@ -154,12 +163,20 @@ func writeControlFrameHeader(w io.Writer, h ControlFrameHeader) error {
 
 func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 	n = 0
-	if err = binary.Write(w, binary.BigEndian, uint32(len(h))); err != nil {
+	numHeaders := len(h)
+	if numHeaders > math.MaxUint32 {
+		return n, &Error{InvalidControlFrame, 0}
+	}
+	if err = binary.Write(w, binary.BigEndian, uint32(numHeaders)); err != nil {
 		return
 	}
 	n += 2
 	for name, values := range h {
-		if err = binary.Write(w, binary.BigEndian, uint32(len(name))); err != nil {
+		nameLen := len(name)
+		if nameLen > math.MaxUint32 {
+			return n, &Error{InvalidControlFrame, 0}
+		}
+		if err = binary.Write(w, binary.BigEndian, uint32(nameLen)); err != nil {
 			return
 		}
 		n += 2
@@ -167,16 +184,20 @@ func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 		if _, err = io.WriteString(w, name); err != nil {
 			return
 		}
-		n += len(name)
+		n += nameLen
 		v := strings.Join(values, headerValueSeparator)
-		if err = binary.Write(w, binary.BigEndian, uint32(len(v))); err != nil {
+		vLen := len(v)
+		if vLen > math.MaxUint32 {
+			return n, &Error{InvalidControlFrame, 0}
+		}
+		if err = binary.Write(w, binary.BigEndian, uint32(vLen)); err != nil {
 			return
 		}
 		n += 2
 		if _, err = io.WriteString(w, v); err != nil {
 			return
 		}
-		n += len(v)
+		n += vLen
 	}
 	return
 }
@@ -200,7 +221,11 @@ func (f *Framer) writeSynStreamFrame(frame *SynStreamFrame) (err error) {
 	// Set ControlFrameHeader.
 	frame.CFHeader.version = Version
 	frame.CFHeader.frameType = TypeSynStream
-	frame.CFHeader.length = uint32(len(f.headerBuf.Bytes()) + 10)
+	hLen := len(f.headerBuf.Bytes()) + 10
+	if hLen > MaxDataLength {
+		return &Error{InvalidControlFrame, 0}
+	}
+	frame.CFHeader.length = uint32(hLen)
 
 	// Serialize frame to Writer.
 	if err = writeControlFrameHeader(f.w, frame.CFHeader); err != nil {
@@ -244,7 +269,11 @@ func (f *Framer) writeSynReplyFrame(frame *SynReplyFrame) (err error) {
 	// Set ControlFrameHeader.
 	frame.CFHeader.version = Version
 	frame.CFHeader.frameType = TypeSynReply
-	frame.CFHeader.length = uint32(len(f.headerBuf.Bytes()) + 4)
+	hLen := len(f.headerBuf.Bytes()) + 4
+	if hLen > MaxDataLength {
+		return &Error{InvalidControlFrame, 0}
+	}
+	frame.CFHeader.length = uint32(hLen)
 
 	// Serialize frame to Writer.
 	if err = writeControlFrameHeader(f.w, frame.CFHeader); err != nil {
@@ -279,7 +308,11 @@ func (f *Framer) writeHeadersFrame(frame *HeadersFrame) (err error) {
 	// Set ControlFrameHeader.
 	frame.CFHeader.version = Version
 	frame.CFHeader.frameType = TypeHeaders
-	frame.CFHeader.length = uint32(len(f.headerBuf.Bytes()) + 4)
+	hLen := len(f.headerBuf.Bytes()) + 4
+	if hLen > MaxDataLength {
+		return &Error{InvalidControlFrame, 0}
+	}
+	frame.CFHeader.length = uint32(hLen)
 
 	// Serialize frame to Writer.
 	if err = writeControlFrameHeader(f.w, frame.CFHeader); err != nil {
@@ -307,7 +340,11 @@ func (f *Framer) writeDataFrame(frame *DataFrame) (err error) {
 	if err = binary.Write(f.w, binary.BigEndian, frame.StreamId); err != nil {
 		return
 	}
-	flagsAndLength := uint32(frame.Flags)<<24 | uint32(len(frame.Data))
+	dLen := len(frame.Data)
+	if dLen > MaxDataLength {
+		return &Error{InvalidDataFrame, frame.StreamId}
+	}
+	flagsAndLength := uint32(frame.Flags)<<24 | uint32(dLen)
 	if err = binary.Write(f.w, binary.BigEndian, flagsAndLength); err != nil {
 		return
 	}
