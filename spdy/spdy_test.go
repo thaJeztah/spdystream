@@ -26,7 +26,7 @@ var HeadersFixture = http.Header{
 
 func TestHeaderParsing(t *testing.T) {
 	var headerValueBlockBuf bytes.Buffer
-	writeHeaderValueBlock(&headerValueBlockBuf, HeadersFixture)
+	_, _ = writeHeaderValueBlock(&headerValueBlockBuf, HeadersFixture)
 	const bogusStreamId = 1
 	f := &Framer{}
 	newHeaders, err := f.parseHeaderValueBlock(&headerValueBlockBuf, bogusStreamId)

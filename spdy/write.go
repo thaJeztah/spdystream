@@ -216,7 +216,9 @@ func (f *Framer) writeSynStreamFrame(frame *SynStreamFrame) (err error) {
 		return
 	}
 	if !f.headerCompressionDisabled {
-		f.headerCompressor.Flush()
+		if err := f.headerCompressor.Flush(); err != nil {
+			return err
+		}
 	}
 
 	// Set ControlFrameHeader.
@@ -264,7 +266,9 @@ func (f *Framer) writeSynReplyFrame(frame *SynReplyFrame) (err error) {
 		return
 	}
 	if !f.headerCompressionDisabled {
-		f.headerCompressor.Flush()
+		if err := f.headerCompressor.Flush(); err != nil {
+			return err
+		}
 	}
 
 	// Set ControlFrameHeader.
@@ -303,7 +307,9 @@ func (f *Framer) writeHeadersFrame(frame *HeadersFrame) (err error) {
 		return
 	}
 	if !f.headerCompressionDisabled {
-		f.headerCompressor.Flush()
+		if err := f.headerCompressor.Flush(); err != nil {
+			return err
+		}
 	}
 
 	// Set ControlFrameHeader.
