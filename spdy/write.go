@@ -161,6 +161,7 @@ func writeControlFrameHeader(w io.Writer, h ControlFrameHeader) error {
 	return nil
 }
 
+//nolint:unparam // result n is never used
 func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 	n = 0
 	numHeaders := len(h)
