@@ -289,7 +289,7 @@ func NewFramerWithOptions(w io.Writer, r io.Reader, opts ...FramerOption) (*Fram
 
 func newFramer(w io.Writer, r io.Reader, opts ...FramerOption) (*Framer, error) {
 	compressBuf := new(bytes.Buffer)
-	compressor, err := zlib.NewWriterLevelDict(compressBuf, zlib.BestCompression, []byte(headerDictionary))
+	compressor, err := zlib.NewWriterLevelDict(compressBuf, zlib.BestCompression, headerDictionary)
 	if err != nil {
 		return nil, err
 	}
