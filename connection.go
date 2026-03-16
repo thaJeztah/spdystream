@@ -351,12 +351,13 @@ Loop:
 	for {
 		readFrame, err := s.framer.ReadFrame()
 		if err != nil {
-			if err != io.EOF {
+			if !errors.Is(err, io.EOF) {
 				debugMessage("frame read error: %s", err)
 			} else {
 				debugMessage("(%p) EOF received", s)
 			}
-			if spdyErr, ok := err.(*spdy.Error); ok && spdyErr.Err == spdy.InvalidControlFrame {
+			var spdyErr *spdy.Error
+			if errors.As(err, &spdyErr) && spdyErr.Err == spdy.InvalidControlFrame {
 				_ = s.conn.Close()
 			}
 			break

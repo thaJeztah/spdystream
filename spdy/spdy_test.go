@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/base64"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -279,7 +280,8 @@ func TestParseHeaderValueBlockRejectsHeaderCountOverLimit(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for excessive header count")
 	}
-	spdyErr, ok := err.(*Error)
+	var spdyErr *Error
+	ok := errors.As(err, &spdyErr)
 	if !ok || spdyErr.Err != InvalidControlFrame {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -299,7 +301,8 @@ func TestParseHeaderValueBlockRejectsHeaderFieldSizeOverLimit(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for excessive header field size")
 	}
-	spdyErr, ok := err.(*Error)
+	var spdyErr *Error
+	ok := errors.As(err, &spdyErr)
 	if !ok || spdyErr.Err != InvalidControlFrame {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -657,7 +660,7 @@ func TestReadMalformedZlibHeader(t *testing.T) {
 			t.Fatalf("NewFramer: %v", err)
 		}
 		_, err = reader.ReadFrame()
-		if err != zlib.ErrHeader {
+		if !errors.Is(err, zlib.ErrHeader) {
 			t.Errorf("Frame %s, expected: %#v, actual: %#v", name, zlib.ErrHeader, err)
 		}
 	}
@@ -723,8 +726,9 @@ func checkZeroStreamId(t *testing.T, frame string, method string, err error) {
 		t.Errorf("%s ZeroStreamId, no error on %s", method, frame)
 		return
 	}
-	eerr, ok := err.(*Error)
-	if !ok || eerr.Err != ZeroStreamId {
-		t.Errorf("%s ZeroStreamId, incorrect error %#v, frame %s", method, eerr, frame)
+	var spdyErr *Error
+	ok := errors.As(err, &spdyErr)
+	if !ok || spdyErr.Err != ZeroStreamId {
+		t.Errorf("%s ZeroStreamId, incorrect error %#v, frame %s", method, spdyErr, frame)
 	}
 }
