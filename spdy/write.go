@@ -170,7 +170,7 @@ func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 	if err = binary.Write(w, binary.BigEndian, uint32(numHeaders)); err != nil {
 		return
 	}
-	n += 2
+	n += 4
 	for name, values := range h {
 		nameLen := len(name)
 		if nameLen > math.MaxUint32 {
@@ -179,7 +179,7 @@ func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 		if err = binary.Write(w, binary.BigEndian, uint32(nameLen)); err != nil {
 			return
 		}
-		n += 2
+		n += 4
 		name = strings.ToLower(name)
 		if _, err = io.WriteString(w, name); err != nil {
 			return
@@ -193,7 +193,7 @@ func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 		if err = binary.Write(w, binary.BigEndian, uint32(vLen)); err != nil {
 			return
 		}
-		n += 2
+		n += 4
 		if _, err = io.WriteString(w, v); err != nil {
 			return
 		}
