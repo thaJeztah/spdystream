@@ -49,6 +49,13 @@ const (
 )
 
 // MaxDataLength is the maximum number of bytes that can be stored in one frame.
+//
+// SPDY frame headers encode the payload length using a 24-bit field,
+// so the maximum representable size for both data and control frames
+// is 2^24-1 bytes.
+//
+// See the SPDY/3 specification, "Frame Format":
+// https://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3-1/
 const MaxDataLength = 1<<24 - 1
 
 const (
