@@ -164,7 +164,7 @@ func writeControlFrameHeader(w io.Writer, h ControlFrameHeader) error {
 func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 	n = 0
 	numHeaders := len(h)
-	if numHeaders > math.MaxUint32 {
+	if numHeaders > math.MaxInt32 {
 		return n, &Error{InvalidControlFrame, 0}
 	}
 	if err = binary.Write(w, binary.BigEndian, uint32(numHeaders)); err != nil {
@@ -173,7 +173,7 @@ func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 	n += 4
 	for name, values := range h {
 		nameLen := len(name)
-		if nameLen > math.MaxUint32 {
+		if nameLen > math.MaxInt32 {
 			return n, &Error{InvalidControlFrame, 0}
 		}
 		if err = binary.Write(w, binary.BigEndian, uint32(nameLen)); err != nil {
@@ -187,7 +187,7 @@ func writeHeaderValueBlock(w io.Writer, h http.Header) (n int, err error) {
 		n += nameLen
 		v := strings.Join(values, headerValueSeparator)
 		vLen := len(v)
-		if vLen > math.MaxUint32 {
+		if vLen > math.MaxInt32 {
 			return n, &Error{InvalidControlFrame, 0}
 		}
 		if err = binary.Write(w, binary.BigEndian, uint32(vLen)); err != nil {
