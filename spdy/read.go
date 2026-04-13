@@ -8,6 +8,7 @@ import (
 	"compress/zlib"
 	"encoding/binary"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -174,7 +175,7 @@ func (f *Framer) parseControlFrame(version uint16, frameType ControlFrameType) (
 	flags := ControlFlags((length & 0xff000000) >> 24)
 	length &= 0xffffff
 	if length > maxControlFramePayload {
-		if _, err := io.CopyN(io.Discard, f.r, int64(length)); err != nil {
+		if _, err := io.CopyN(ioutil.Discard, f.r, int64(length)); err != nil {
 			return nil, err
 		}
 		return nil, &Error{InvalidControlFrame, 0}
